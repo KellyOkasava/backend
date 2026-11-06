@@ -4,24 +4,29 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.HashMap;
+import java.util.Map;
 
 public class BakeryHandler implements HttpHandler {
             
     Buns makBuns = new Buns( 67, 25);
     Buyer currentBuyer = new Buyer("standart", 0);
+    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
 
     @Override 
     public void handle(HttpExchange exchange) throws IOException {
 
         String method = exchange.getRequestMethod();
 
-        String jsonAnswer = "";
+        Object responseObject = null;
         String query = exchange.getRequestURI().getQuery();
 
         if ("GET".equals(method) && query == null) {
-            jsonAnswer = "{\"Приветствие\":\"Добро пожаловать в нашу пекарню 'Маковые булочки'! Для покупки допишите параметры в адресную строку. Сначала вводится количество желаемых булочек, потом статус клиента и имеющееся сумма.\"," +
-                         "\"Цена за булочку сегодня\":" + makBuns.price + "," +
-                         "\"остаток булочек на складе\":" + makBuns.quantity + "}";
+            Map<String, Object> getResponse = new HashMap<>();
+            getResponse.put("Приветствие", "Добро пожаловать в нашу пекарню 'Маковые булочки'! Для покупки допишите параметры в адресную строку. Сначала вводится количество желаемых булочек, потом статус клиента и имеющееся сумма.");
+            getResponse.put("Цена за булочку сегодня", makBuns.price);
+            getResponse.put("остаток булочек на складе", makBuns.quantity);
+            responseObject = getResponse;
         }
         
          else if ("POST".equals(method) || (query != null && query.contains("quantity="))) {
@@ -44,8 +49,15 @@ public class BakeryHandler implements HttpHandler {
 
             Buyer currentBuyer = new Buyer(clientStatus, clientWallet);
 
-            if ("standart".equals(currentBuyer.status) && wantToBuy > 5) {
-                jsonAnswer = "{\"error\":\"Обычный клиент не может купить больше 5 булочек за один раз\"}";
+            Map<String, Object> errorMap = new HashMap<>();
+            if (wantToBuy <= 0) {
+                errorMap.put("error", "Количество булочек для покупки должно быть больше 0!");
+                responseObject = errorMap;
+            }
+            
+            else if ("standart".equals(currentBuyer.status) && wantToBuy > 5) {
+                errorMap.put("error", "Обычный клиент не может купить больше 5 булочек за один раз");
+                responseObject = errorMap;
             } 
 
             else {
@@ -55,22 +67,28 @@ public class BakeryHandler implements HttpHandler {
                 }
 
                 if (!makBuns.IsAvailability(wantToBuy)) {
-                    jsonAnswer = "{\"error\":\"На складе недостаточно булочек!\"}";
+                    errorMap.put("error", "На складе недостаточно булочек!");
+                    responseObject = errorMap;
                 } else if (!currentBuyer.IsEnoughMoney(totalPrice)) {
-                    jsonAnswer = "{\"error\":\"У покупателя не хватает денег! Нужно: " + totalPrice + ", а есть: " + currentBuyer.wallet + "\"}";
+                    errorMap.put("error", "У покупателя не хватает денег! Нужно: " + totalPrice + ", а есть: " + currentBuyer.wallet);
+                    responseObject = errorMap;
                 } else {
                     
                     makBuns.quantity -= wantToBuy;      
                     currentBuyer.wallet -= totalPrice;  
                     
-                    jsonAnswer = "{\"Статус покупки\":\"Успешная покупка!\",\"статус текущего клиента\":\"" + currentBuyer.status + 
-                                 "\",\"итоговая цена\":" + totalPrice + 
-                                 ",\"остаток в кошельке\":" + currentBuyer.wallet + 
-                                 ",\"остаток булочек на складе\":" + makBuns.quantity + "}";
+                    Map<String, Object> successMap = new HashMap<>();
+                    successMap.put("Статус покупки", "Успешная покупка!");
+                    successMap.put("статус текущего клиента", currentBuyer.status);
+                    successMap.put("итоговая цена", totalPrice);
+                    successMap.put("остаток в кошельке", currentBuyer.wallet);
+                    successMap.put("остаток булочек на складе", makBuns.quantity);
+                    responseObject = successMap;
                 }
             }
         }
 
+        String jsonAnswer = mapper.writeValueAsString(responseObject);
         byte[] bodyBytes = jsonAnswer.getBytes("UTF-8");
 
         exchange.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");

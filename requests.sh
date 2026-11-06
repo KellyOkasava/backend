@@ -21,7 +21,10 @@ echo "проверочный тест 5: проверка на стойкост�
 curl -X POST "http://localhost:8080/buns"
 echo -e "\n"
 
-echo "проверочный тест 6: финальный осмотр остатков на складе пекарни "
-curl -X GET "http://localhost:8080/buns"
+echo "проверочный тест 6: проверка атаки на баг с отрицательным количеством (Запрос с -2 булочками, ошибка валидации) "
+curl -X POST "http://localhost:8080/buns?quantity=-2&status=standart&wallet=200"
 echo -e "\n"
 
+echo "проверочный тест 7: финальный осмотр остатков на складе пекарни "
+curl -X GET "http://localhost:8080/buns"
+echo -e "\n"
