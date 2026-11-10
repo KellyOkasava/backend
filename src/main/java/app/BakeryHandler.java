@@ -2,6 +2,7 @@ package app;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import tools.jackson.databind.json.JsonMapper;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashMap;
@@ -9,9 +10,9 @@ import java.util.Map;
 
 public class BakeryHandler implements HttpHandler {
             
-    Buns makBuns = new Buns( 67, 25);
-    Buyer currentBuyer = new Buyer("standart", 0);
-    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+    Buns makBuns = new Buns(1, 67, 25);
+    Buyer currentBuyer = new Buyer("1", "standart", 0);
+    JsonMapper mapper = JsonMapper.builder().build();
 
     @Override 
     public void handle(HttpExchange exchange) throws IOException {
@@ -47,7 +48,7 @@ public class BakeryHandler implements HttpHandler {
                 }
             }
 
-            Buyer currentBuyer = new Buyer(clientStatus, clientWallet);
+            Buyer currentBuyer = new Buyer("1", clientStatus, clientWallet);
 
             Map<String, Object> errorMap = new HashMap<>();
             if (wantToBuy <= 0) {
@@ -88,8 +89,7 @@ public class BakeryHandler implements HttpHandler {
             }
         }
 
-        String jsonAnswer = mapper.writeValueAsString(responseObject);
-        byte[] bodyBytes = jsonAnswer.getBytes("UTF-8");
+        byte[] bodyBytes = mapper.writeValueAsBytes(responseObject);
 
         exchange.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
 
